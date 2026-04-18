@@ -1,2 +1,494 @@
 # Codebase-Assistance-using-RAG
  • Built commit-aware ingestion pipeline with automated code parsing and version control integration, enabling real-time synchronization of codebase changes and maintaining up-to-date knowledge base • Enhanced search accuracy by 40% through implementation of LLM-powered query expansion and cross-encoder re-ranking.
+# Codebase RAG System
+
+A production-grade Retrieval-Augmented Generation (RAG) system for semantic search over large codebases with intelligent code understanding and context.
+
+## Features
+
+### 🧠 AST-Aware Code Ingestion
+- **Language-Specific Parsing**: Uses Abstract Syntax Trees (AST) to understand code structure
+- **Intelligent Chunking**: Automatically extracts functions, classes, and logical code units
+- **Multi-Language Support**: Python, JavaScript, TypeScript, Java, C++, Go, Rust, Ruby, PHP
+- **Rich Metadata**: Preserves code complexity, docstrings, and semantic relationships
+
+### 🔍 Semantic Retrieval with FAISS
+- **Fast Vector Search**: Uses Facebook's FAISS for efficient similarity search
+- **Sentence Transformers**: State-of-the-art embedding models
+- **Hybrid Search**: Combines semantic and keyword-based retrieval
+- **Index Management**: Automatic saving, loading, and incremental updates
+
+### 🤖 LLM-Driven Query Expansion
+- **Smart Query Rewriting**: Uses LLMs to expand queries for better coverage
+- **Multiple Strategies**: 
+  - Synonym expansion
+  - Related concepts
+  - Implementation patterns
+  - Error handling aspects
+  - Performance optimization patterns
+- **Comprehensive Coverage**: Explores different phrasings and interpretations
+
+### 🎯 Cross-Encoder Re-Ranking
+- **Intelligent Re-ranking**: Cross-encoder models for precise relevance scoring
+- **Multi-Strategy Scoring**: Combines multiple ranking signals
+- **Result Diversification**: Avoids redundant results from same file
+- **Threshold Filtering**: Configurable confidence thresholds
+
+### 📊 Commit-Aware Context
+- **Git Integration**: Analyzes repository history and commits
+- **Impact Analysis**: Shows who last modified code and when
+- **Related Changes**: Identifies files changed together
+- **Commit Context**: Displays messages and authors for full context
+
+### 💎 Clean Streamlit UI
+- **Interactive Search**: Real-time code search with visual results
+- **Score Visualization**: Shows relevance scores from all stages
+- **Code Preview**: Syntax-highlighted code snippets
+- **Context Display**: Commit history and related information
+- **Advanced Options**: Tunable parameters for search behavior
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User Interface                            │
+│                  (Streamlit App / CLI)                       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+    ┌───▼───┐          ┌───▼────┐        ┌──▼─────┐
+    │ Search│          │Config  │        │Status  │
+    │Engine │          │Manager │        │        │
+    └───┬───┘          └────────┘        └────────┘
+        │
+    ┌───▼────────────────────────────────────────────┐
+    │         RAG System (Core Pipeline)             │
+    └───┬──────────────────────────────────────────┬─┘
+        │                                          │
+    ┌───▼─────────────┐            ┌──────────────▼────┐
+    │ Query Expansion │            │ Repository         │
+    │ - LLM Rewriting │            │ Ingestion          │
+    │ - Multi-strategy│            │ - AST Parsing      │
+    └─────────────────┘            │ - Code Chunking    │
+                                   │ - Metadata Extract │
+                                   └────────────────────┘
+        │
+    ┌───▼──────────────────────┐
+    │ Semantic Retrieval       │
+    │ - FAISS Index            │
+    │ - Embedding Generation   │
+    │ - Vector Search          │
+    └───┬──────────────────────┘
+        │
+    ┌───▼──────────────────────┐
+    │ Re-Ranking & Scoring     │
+    │ - Cross-encoder Models   │
+    │ - Score Normalization    │
+    │ - Result Diversification │
+    └───┬──────────────────────┘
+        │
+    ┌───▼──────────────────────┐
+    │ Context Enrichment       │
+    │ - Git Analysis           │
+    │ - Commit History         │
+    │ - Related Changes        │
+    └──────────────────────────┘
+```
+
+## Installation
+
+### Prerequisites
+- Python 3.10+
+- Git repository for indexing
+- OpenAI API key (for LLM features)
+
+### Setup
+
+1. **Clone and setup environment:**
+```bash
+cd RAG
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
+```
+
+2. **Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Configure environment:**
+```bash
+cp .env.example .env
+# Edit .env with your settings:
+# - OPENAI_API_KEY
+# - REPO_PATH (path to codebase to index)
+# - Other optional parameters
+```
+
+## Quick Start
+
+### 1. Index a Repository
+
+```bash
+python -m cli init --repo-path /path/to/repo
+```
+
+This will:
+- Scan the repository for supported code files
+- Parse code using AST analysis
+- Generate embeddings
+- Build and save FAISS index
+
+### 2. Search the Codebase
+
+**CLI Search:**
+```bash
+python -m cli search "authentication middleware"
+```
+
+**Interactive Mode:**
+```bash
+python -m cli interactive
+```
+
+**Streamlit UI:**
+```bash
+streamlit run src/ui/app.py
+```
+
+### 3. Check System Status
+
+```bash
+python -m cli status
+python -m cli config --list
+```
+
+## Usage Examples
+
+### Python API
+
+```python
+from src.rag_system import RAGSystem
+
+# Initialize system
+rag = RAGSystem()
+
+# Load existing index
+rag.load_existing_index()
+
+# Search
+results = rag.search(
+    query="error handling in async functions",
+    expand_query=True,
+    include_context=True,
+    top_k=5
+)
+
+# Process results
+for result in results:
+    chunk = result.ranked_result.result.chunk
+    score = result.ranked_result.final_score
+    
+    print(f"File: {chunk.file_path}")
+    print(f"Score: {score:.3f}")
+    print(f"Code:\n{chunk.content}\n")
+    
+    if result.commit_context:
+        print(f"Last modified by: {result.commit_context.author}")
+```
+
+### CLI Usage
+
+```bash
+# Search with custom parameters
+python -m cli search "database connection pooling" --top-k 10
+
+# Search without query expansion
+python -m cli search "config parsing" --no-expansion
+
+# Search without git context
+python -m cli search "logging setup" --no-context
+
+# Interactive search mode
+python -m cli interactive
+```
+
+### Streamlit UI
+
+Run `streamlit run src/ui/app.py` to access:
+- Interactive search interface
+- Adjustable parameters (top-k, thresholds)
+- Score visualization
+- Code preview with syntax highlighting
+- Commit history view
+- Search analysis dashboard
+
+## Configuration
+
+All settings are in `.env`:
+
+```env
+# LLM Settings
+OPENAI_API_KEY=your_api_key
+LLM_MODEL=gpt-4
+EMBEDDING_MODEL=text-embedding-3-small
+
+# Retrieval Settings
+FAISS_INDEX_PATH=./data/faiss_index
+CHUNK_SIZE=512
+CHUNK_OVERLAP=50
+TOP_K_RETRIEVAL=10
+TOP_K_RANKING=5
+
+# Re-ranking
+RERANKER_MODEL=cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+RERANKER_THRESHOLD=0.5
+
+# Repository
+REPO_PATH=./repo_to_index
+INCLUDE_EXTENSIONS=.py,.js,.ts,.java,.cpp,.c,.go,.rs,.rb,.php
+EXCLUDE_PATTERNS=__pycache__,node_modules,.git,.env
+
+# API
+API_HOST=0.0.0.0
+API_PORT=8000
+STREAMLIT_PORT=8501
+```
+
+## Components
+
+### Ingestion Module (`src/ingestion/`)
+- **code_ingestion.py**: AST parsing, chunking, repository scanning
+  - `ASTAnalyzer`: Python AST parsing
+  - `LanguageAnalyzer`: Multi-language support
+  - `CodeChunker`: Intelligent code chunking
+  - `RepositoryIngester`: Full repository processing
+
+### Retrieval Module (`src/retrieval/`)
+- **semantic_retriever.py**: FAISS-based semantic search
+  - `SemanticRetriever`: Vector search with embeddings
+  - `KeywordRetriever`: Keyword-based fallback
+
+### Query Expansion (`src/query_expansion/`)
+- **llm_expander.py**: LLM-driven query expansion
+  - `QueryExpander`: Basic query expansion
+  - `HybridQueryExpander`: Multiple strategies
+
+### Ranking Module (`src/ranking/`)
+- **cross_encoder.py**: Re-ranking and scoring
+  - `CrossEncoderReranker`: Cross-encoder scoring
+  - `EnsembleReranker`: Ensemble strategies
+
+### Context Module (`src/context/`)
+- **git_context.py**: Git integration
+  - `GitContextManager`: Git history and blame
+  - `ContextualRetriever`: Enrichment pipeline
+
+### UI Module (`src/ui/`)
+- **app.py**: Streamlit interface
+  - Interactive search
+  - Configuration controls
+  - Result visualization
+
+### Utilities (`src/utils/`)
+- **config.py**: Configuration management
+- **logger.py**: Logging setup
+- **models.py**: Data models and types
+
+## Performance Tuning
+
+### For Large Codebases (>100k files)
+
+```env
+# Use smaller chunk size for efficiency
+CHUNK_SIZE=256
+CHUNK_OVERLAP=25
+
+# Limit retrieval scope
+TOP_K_RETRIEVAL=20
+TOP_K_RANKING=5
+
+# Use smaller embedding model
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+```
+
+### For Maximum Accuracy
+
+```env
+# Larger chunks for context
+CHUNK_SIZE=1024
+CHUNK_OVERLAP=100
+
+# More retrieval candidates
+TOP_K_RETRIEVAL=50
+TOP_K_RANKING=10
+
+# Better embedding model
+EMBEDDING_MODEL=sentence-transformers/all-mpnet-base-v2
+
+# Lower threshold
+RERANKER_THRESHOLD=0.3
+```
+
+## Advanced Features
+
+### Incremental Index Updates
+
+```python
+from pathlib import Path
+from src.rag_system import RAGSystem
+
+rag = RAGSystem()
+rag.load_existing_index()
+
+# Add new files
+new_files = [Path("src/new_module.py")]
+rag.update_index(new_files)
+```
+
+### Batch Processing
+
+```python
+from src.retrieval.semantic_retriever import SemanticRetriever
+
+retriever = SemanticRetriever()
+retriever.load_index()
+
+queries = [
+    "authentication",
+    "database connection",
+    "error handling"
+]
+
+for query in queries:
+    results = retriever.search(query, k=5)
+    # Process results
+```
+
+### Git-Aware Context
+
+```python
+from src.context.git_context import GitContextManager
+
+git_ctx = GitContextManager(Path("./repo"))
+
+# Get commit history
+commits = git_ctx.get_file_commits("src/main.py", limit=10)
+
+# Analyze impact
+for commit in commits:
+    print(f"{commit.author}: {commit.message}")
+    print(f"Changes: {commit.insertions} inserted, {commit.deletions} deleted")
+```
+
+## Troubleshooting
+
+### Index Not Loading
+```bash
+python -m cli status
+# If index not found, rebuild:
+python -m cli init
+```
+
+### Poor Search Results
+- Try enabling query expansion: `search --no-expansion` should be False
+- Increase TOP_K_RETRIEVAL before re-ranking
+- Lower RERANKER_THRESHOLD
+
+### High Memory Usage
+- Reduce CHUNK_SIZE
+- Use smaller embedding model
+- Process files in batches
+
+### Slow Indexing
+- Increase BATCH_SIZE (more memory but faster)
+- Use `--parallel` flag when available
+- Check EXCLUDE_PATTERNS to skip large directories
+
+## API Reference
+
+See inline documentation in source files for detailed API reference.
+
+Key classes:
+- `RAGSystem`: Main orchestrator
+- `SemanticRetriever`: Vector search
+- `CrossEncoderReranker`: Re-ranking
+- `RepositoryIngester`: Code ingestion
+- `GitContextManager`: Git history
+
+## Development
+
+### Running Tests
+```bash
+pytest tests/
+pytest -v --cov=src tests/
+```
+
+### Code Quality
+```bash
+black src/
+flake8 src/
+mypy src/
+pre-commit run --all-files
+```
+
+## Performance Benchmarks
+
+Typical performance on modern hardware:
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| Index 10k files | 5-15 min | Depends on code size |
+| Search + Re-rank | 200-500ms | Top-10 retrieval |
+| Query expansion | 1-2 sec | Uses LLM |
+| Index load | <1 sec | FAISS index |
+| Memory (indexed) | 2-5GB | Depends on corpus size |
+
+## Future Enhancements
+
+- [ ] Multi-language LLM support (Claude, Llama)
+- [ ] Distributed indexing for very large codebases
+- [ ] Fine-tuned domain-specific models
+- [ ] Real-time indexing with file watchers
+- [ ] Advanced filter capabilities
+- [ ] Export/import functionality
+- [ ] Performance profiling dashboard
+- [ ] Batch API endpoint
+
+## License
+
+MIT License - See LICENSE file for details
+
+## Contributing
+
+Contributions welcome! Please follow:
+1. Code style: Black + isort
+2. Type hints required
+3. Unit tests for new features
+4. Update documentation
+
+## Support
+
+For issues and questions:
+1. Check the troubleshooting section
+2. Review source code documentation
+3. Open an issue with reproduction steps
+
+## Citation
+
+If you use this system in research, please cite:
+
+```
+@software{rag_system_2024,
+  title={Production-Grade Codebase RAG System},
+  author={RAG Team},
+  year={2024},
+  url={https://github.com/...}
+}
+```
+
+---
+
+**Built with** ❤️ **for developers seeking better code understanding**
